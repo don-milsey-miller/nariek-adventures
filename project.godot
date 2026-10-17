@@ -1,5 +1,10 @@
 ; Engine configuration file.
-; Edit this file through the Godot editor whenever possible.
+; It's best edited using the editor UI and not directly,
+; since the parameters that go here are not all obvious.
+;
+; Format:
+;   [section] ; section goes between []
+;   param=value ; assign values to parameters
 
 config_version=5
 
@@ -53,4 +58,3 @@ basic_attack={
 [rendering]
 
 environment/defaults/default_clear_color=Color(0.024, 0.035, 0.059, 1)
-

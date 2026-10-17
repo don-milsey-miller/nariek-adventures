@@ -1,6 +1,8 @@
 extends CharacterBody3D
 class_name PlayerController
 
+const PLAYER_DAMAGE_FLASH_COLOR := Color(1.0, 0.18, 0.12, 1.0)
+
 @export_category("Movement")
 @export_range(0.1, 20.0, 0.1) var move_speed: float = 6.0
 @export_range(0.1, 60.0, 0.1) var acceleration: float = 24.0
@@ -15,6 +17,7 @@ class_name PlayerController
 @export_range(0.1, 2.0, 0.05) var basic_attack_cooldown: float = 0.55
 @export_range(0.01, 0.5, 0.01) var basic_attack_hit_delay: float = 0.09
 @export_range(0.05, 0.5, 0.01) var basic_attack_swing_duration: float = 0.18
+@export_range(0.1, 10.0, 0.1) var respawn_delay: float = 2.0
 
 @export_category("Camera")
 @export_range(0.0005, 0.02, 0.0005) var mouse_sensitivity: float = 0.003
@@ -24,26 +27,49 @@ class_name PlayerController
 @export_range(5.0, 12.0, 0.1) var maximum_zoom: float = 8.0
 @export_range(0.1, 2.0, 0.1) var zoom_step: float = 0.6
 
+@onready var collision_shape: CollisionShape3D = $CollisionShape3D
+@onready var health: HealthComponent = $Health
 @onready var visuals: Node3D = $Visuals
+@onready var body_mesh: MeshInstance3D = $Visuals/Body
 @onready var weapon_pivot: Node3D = $Visuals/WeaponPivot
 @onready var melee_hitbox: Area3D = $Visuals/MeleeHitbox
 @onready var melee_collision_shape: CollisionShape3D = $Visuals/MeleeHitbox/CollisionShape3D
 @onready var camera_pivot: Node3D = $CameraPivot
 @onready var spring_arm: SpringArm3D = $CameraPivot/SpringArm3D
+@onready var health_label: Label = $HUD/HealthPanel/HealthContent/HealthLabel
+@onready var health_bar: ProgressBar = $HUD/HealthPanel/HealthContent/HealthBar
+@onready var respawn_label: Label = $HUD/HealthPanel/HealthContent/RespawnLabel
 
 var _camera_pitch: float = 0.0
 var _last_forward_press_msec: int = -1
 var _is_running: bool = false
 var _can_attack: bool = true
 var _attack_tween: Tween
+var _spawn_position: Vector3
+var _is_defeated: bool = false
+var _body_material: StandardMaterial3D
+var _base_body_color: Color
+var _damage_feedback_tween: Tween
 
 
 func _ready() -> void:
+	_spawn_position = global_position
 	_camera_pitch = spring_arm.rotation.x
+	_body_material = body_mesh.material_override.duplicate() as StandardMaterial3D
+	body_mesh.material_override = _body_material
+	_base_body_color = _body_material.albedo_color
+	health.health_changed.connect(_on_health_changed)
+	health.damaged.connect(_on_damaged)
+	health.died.connect(_on_died)
+	_on_health_changed(health.current_health, health.maximum_health)
 	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 
 
 func _physics_process(delta: float) -> void:
+	if _is_defeated:
+		velocity = Vector3.ZERO
+		return
+
 	var input_vector := Input.get_vector(
 		"move_left",
 		"move_right",
@@ -129,13 +155,16 @@ func _handle_run_input(event: InputEventKey) -> void:
 
 
 func _try_basic_attack() -> void:
-	if not _can_attack:
+	if not _can_attack or _is_defeated:
 		return
 
 	_can_attack = false
 	_play_basic_attack_animation()
 
 	await get_tree().create_timer(basic_attack_hit_delay).timeout
+	if _is_defeated:
+		_can_attack = true
+		return
 	_deal_basic_attack_damage()
 
 	var remaining_cooldown := maxf(basic_attack_cooldown - basic_attack_hit_delay, 0.0)
@@ -182,6 +211,48 @@ func _play_basic_attack_animation() -> void:
 		basic_attack_swing_duration
 	).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
 	_attack_tween.tween_property(weapon_pivot, "rotation:y", deg_to_rad(-65.0), 0.12)
+
+
+func _on_health_changed(current_health: int, maximum_health: int) -> void:
+	health_bar.max_value = maximum_health
+	health_bar.value = current_health
+	health_label.text = "HEALTH  %d / %d" % [current_health, maximum_health]
+
+
+func _on_damaged(_amount: int) -> void:
+	if _damage_feedback_tween != null and _damage_feedback_tween.is_valid():
+		_damage_feedback_tween.kill()
+
+	_body_material.albedo_color = PLAYER_DAMAGE_FLASH_COLOR
+	_damage_feedback_tween = create_tween()
+	_damage_feedback_tween.tween_property(_body_material, "albedo_color", _base_body_color, 0.25)
+
+
+func _on_died() -> void:
+	if _is_defeated:
+		return
+
+	_is_defeated = true
+	_is_running = false
+	_can_attack = false
+	velocity = Vector3.ZERO
+	if _attack_tween != null and _attack_tween.is_valid():
+		_attack_tween.kill()
+	weapon_pivot.rotation.y = deg_to_rad(-65.0)
+	collision_shape.set_deferred("disabled", true)
+	visuals.visible = false
+	respawn_label.visible = true
+
+	await get_tree().create_timer(respawn_delay).timeout
+
+	global_position = _spawn_position
+	health.reset_health()
+	_body_material.albedo_color = _base_body_color
+	visuals.visible = true
+	respawn_label.visible = false
+	collision_shape.set_deferred("disabled", false)
+	_is_defeated = false
+	_can_attack = true
 
 
 func _get_camera_relative_direction(input_vector: Vector2) -> Vector3:

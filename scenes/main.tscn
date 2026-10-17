@@ -1,7 +1,8 @@
-[gd_scene load_steps=10 format=3]
+[gd_scene load_steps=11 format=3]
 
 [ext_resource type="PackedScene" path="res://scenes/player/player.tscn" id="1_player"]
 [ext_resource type="PackedScene" path="res://scenes/targets/training_dummy.tscn" id="2_dummy"]
+[ext_resource type="PackedScene" path="res://scenes/enemies/basic_enemy.tscn" id="3_enemy"]
 
 [sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_arena"]
 sky_top_color = Color(0.12, 0.24, 0.43, 1)
@@ -111,6 +112,9 @@ material = SubResource("Material_wall")
 [node name="TrainingDummy" parent="." instance=ExtResource("2_dummy")]
 position = Vector3(0, 0.1, 0)
 
+[node name="BasicEnemy" parent="." instance=ExtResource("3_enemy")]
+position = Vector3(8, 0.05, -7)
+
 [node name="Player" parent="." instance=ExtResource("1_player")]
 position = Vector3(0, 0.05, 7)
 
@@ -133,10 +137,10 @@ horizontal_alignment = 1
 offset_left = 20.0
 offset_top = 20.0
 offset_right = 500.0
-offset_bottom = 185.0
+offset_bottom = 210.0
 theme_override_colors/font_color = Color(0.9, 0.94, 1, 1)
 theme_override_colors/font_outline_color = Color(0.02, 0.03, 0.05, 0.9)
 theme_override_constants/outline_size = 6
 theme_override_font_sizes/font_size = 17
-text = "WASD  Move\nDouble-tap + hold W  Run\nLeft click  Attack\nMouse  Look\nWheel  Zoom\nSpace  Jump\nEsc  Release mouse"
+text = "WASD  Move\nDouble-tap + hold W  Run\nLeft click  Attack\nMouse  Look\nWheel  Zoom\nSpace  Jump\nEsc  Release mouse\nEnemy turns yellow  Dodge!"
 

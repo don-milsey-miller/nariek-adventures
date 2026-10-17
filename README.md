@@ -16,8 +16,11 @@ The project currently contains a small 3D movement sandbox with:
 - A greybox arena with several obstacles
 - A basic left-click melee attack with a visible weapon swing
 - A damageable training dummy with health, damage feedback, death, and respawning
+- A red enemy that detects, chases, and attacks the player
+- A yellow attack warning that gives the player time to dodge
+- Player health, defeat, and automatic respawning
 
-The next milestone will build on this combat foundation with an enemy that can move and fight back. Networking will be added after the basic movement and combat feel good. The first multiplayer target will be two players in one small area.
+The next milestone will be selected after movement and the first complete combat loop have been play-tested together. Networking will be added after the basic movement and combat feel good. The first multiplayer target will be two players in one small area.
 
 ## Technology
 
@@ -41,6 +44,7 @@ The project opens directly into the movement sandbox. Controls are displayed in 
 assets/          Art, models, textures, sound, and music
 scenes/          Godot scenes, beginning with the main scene
 scenes/player/   The reusable player scene
+scenes/enemies/  Enemies that move and fight back
 scenes/targets/  Damageable targets used to develop combat
 scripts/         Reusable typed GDScript source files
 scripts/components/ Small reusable gameplay building blocks
