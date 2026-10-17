@@ -1,0 +1,24 @@
+# Godot-generated files
+.godot/
+.import/
+
+# Local build output
+builds/
+
+# C#/.NET-generated files (kept out even though this project begins in GDScript)
+.mono/
+data_*/
+mono_crash.*.json
+
+# Editors and operating systems
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Temporary files and logs
+*.log
+*.tmp
+*~
+
