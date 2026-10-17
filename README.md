@@ -4,18 +4,17 @@ Nariek Adventures is an early-stage 3D online cooperative action RPG. The long-t
 
 The project is deliberately starting small. Our first goal is a fun, understandable prototype—not a full MMO.
 
-## Current milestone
+## Current prototype
 
-Build a small offline combat playground containing:
+The project currently contains a small 3D movement sandbox with:
 
-- A third-person player character
-- WASD movement and a mouse-controlled camera
-- One basic melee attack
-- One simple enemy
-- Health, damage, death, and respawning
-- Placeholder geometry and artwork
+- A third-person placeholder character
+- Camera-relative WASD movement
+- Mouse-controlled camera orbit and wheel zoom
+- Jumping, gravity, and collision
+- A greybox arena with several obstacles
 
-Networking will be added after the basic movement and combat feel good. The first multiplayer target will be two players in one small area.
+The next milestone is the first combat interaction: one basic melee attack, a training target, health, and damage feedback. Networking will be added after the basic movement and combat feel good. The first multiplayer target will be two players in one small area.
 
 ## Technology
 
@@ -31,14 +30,15 @@ Networking will be added after the basic movement and combat feel good. The firs
 3. Select **Import**, then choose this repository's `project.godot` file.
 4. Open the project and press **F6** or **F5** to run it.
 
-The current scene is only a project-start screen. Gameplay will be introduced in small, testable steps.
+The project opens directly into the movement sandbox. Controls are displayed in the upper-left corner.
 
 ## Project structure
 
 ```text
-assets/     Art, models, textures, sound, and music
-scenes/     Godot scenes, beginning with the main scene
-scripts/    Reusable GDScript source files
+assets/          Art, models, textures, sound, and music
+scenes/          Godot scenes, beginning with the main scene
+scenes/player/   The reusable player scene
+scripts/         Reusable typed GDScript source files
 ```
 
 More folders will be added only when the project needs them.
