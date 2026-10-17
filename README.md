@@ -8,10 +8,11 @@ The project is deliberately starting small. Our first goal is a fun, understanda
 
 The project currently contains a small 3D movement sandbox with:
 
-- A third-person placeholder character
+- A first-person player view with a simple weapon and crosshair
 - Camera-relative WASD movement
 - Double-tap-and-hold W running
-- Mouse-controlled camera orbit and wheel zoom
+- Mouse-controlled first-person camera look
+- Arrow-key camera look as a laptop trackpad fallback
 - Jumping, gravity, and collision
 - A greybox arena with several obstacles
 - A basic left-click melee attack with a visible weapon swing

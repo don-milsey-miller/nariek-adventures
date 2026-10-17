@@ -1,13 +1,14 @@
 extends CharacterBody3D
 class_name PlayerController
 
-const PLAYER_DAMAGE_FLASH_COLOR := Color(1.0, 0.18, 0.12, 1.0)
+const WEAPON_REST_ROTATION_DEGREES := 12.0
+const WEAPON_SWING_ROTATION_DEGREES := -55.0
+const DAMAGE_OVERLAY_COLOR := Color(0.9, 0.04, 0.02, 0.24)
 
 @export_category("Movement")
 @export_range(0.1, 20.0, 0.1) var move_speed: float = 6.0
 @export_range(0.1, 60.0, 0.1) var acceleration: float = 24.0
 @export_range(0.1, 60.0, 0.1) var deceleration: float = 30.0
-@export_range(0.1, 20.0, 0.1) var turn_speed: float = 12.0
 @export_range(0.1, 20.0, 0.1) var jump_velocity: float = 5.5
 @export_range(1.0, 3.0, 0.05) var run_speed_multiplier: float = 1.65
 @export_range(0.1, 0.6, 0.01) var run_double_tap_window: float = 0.3
@@ -23,19 +24,18 @@ const PLAYER_DAMAGE_FLASH_COLOR := Color(1.0, 0.18, 0.12, 1.0)
 @export_range(0.0005, 0.02, 0.0005) var mouse_sensitivity: float = 0.003
 @export_range(-89.0, 0.0, 1.0) var minimum_pitch_degrees: float = -55.0
 @export_range(0.0, 89.0, 1.0) var maximum_pitch_degrees: float = 65.0
-@export_range(1.0, 5.0, 0.1) var minimum_zoom: float = 2.5
-@export_range(5.0, 12.0, 0.1) var maximum_zoom: float = 8.0
-@export_range(0.1, 2.0, 0.1) var zoom_step: float = 0.6
+@export_range(30.0, 240.0, 1.0) var keyboard_look_speed_degrees: float = 100.0
 
 @onready var collision_shape: CollisionShape3D = $CollisionShape3D
 @onready var health: HealthComponent = $Health
-@onready var visuals: Node3D = $Visuals
-@onready var body_mesh: MeshInstance3D = $Visuals/Body
-@onready var weapon_pivot: Node3D = $Visuals/WeaponPivot
-@onready var melee_hitbox: Area3D = $Visuals/MeleeHitbox
-@onready var melee_collision_shape: CollisionShape3D = $Visuals/MeleeHitbox/CollisionShape3D
+@onready var world_model: Node3D = $WorldModel
+@onready var attack_direction: Node3D = $AttackDirection
+@onready var weapon_pivot: Node3D = $CameraPivot/Camera3D/WeaponPivot
+@onready var melee_hitbox: Area3D = $AttackDirection/MeleeHitbox
+@onready var melee_collision_shape: CollisionShape3D = $AttackDirection/MeleeHitbox/CollisionShape3D
 @onready var camera_pivot: Node3D = $CameraPivot
-@onready var spring_arm: SpringArm3D = $CameraPivot/SpringArm3D
+@onready var camera: Camera3D = $CameraPivot/Camera3D
+@onready var damage_overlay: ColorRect = $HUD/DamageOverlay
 @onready var health_label: Label = $HUD/HealthPanel/HealthContent/HealthLabel
 @onready var health_bar: ProgressBar = $HUD/HealthPanel/HealthContent/HealthBar
 @onready var respawn_label: Label = $HUD/HealthPanel/HealthContent/RespawnLabel
@@ -47,17 +47,14 @@ var _can_attack: bool = true
 var _attack_tween: Tween
 var _spawn_position: Vector3
 var _is_defeated: bool = false
-var _body_material: StandardMaterial3D
-var _base_body_color: Color
 var _damage_feedback_tween: Tween
 
 
 func _ready() -> void:
 	_spawn_position = global_position
-	_camera_pitch = spring_arm.rotation.x
-	_body_material = body_mesh.material_override.duplicate() as StandardMaterial3D
-	body_mesh.material_override = _body_material
-	_base_body_color = _body_material.albedo_color
+	_camera_pitch = camera.rotation.x
+	world_model.visible = false
+	_sync_facing_to_camera()
 	health.health_changed.connect(_on_health_changed)
 	health.damaged.connect(_on_damaged)
 	health.died.connect(_on_died)
@@ -66,6 +63,9 @@ func _ready() -> void:
 
 
 func _physics_process(delta: float) -> void:
+	_update_keyboard_look(delta)
+	_sync_facing_to_camera()
+
 	if _is_defeated:
 		velocity = Vector3.ZERO
 		return
@@ -90,7 +90,6 @@ func _physics_process(delta: float) -> void:
 			movement_direction.z * current_move_speed,
 			acceleration * delta
 		)
-		_rotate_visuals_toward(movement_direction, delta)
 	else:
 		velocity.x = move_toward(velocity.x, 0.0, deceleration * delta)
 		velocity.z = move_toward(velocity.z, 0.0, deceleration * delta)
@@ -123,10 +122,6 @@ func _unhandled_input(event: InputEvent) -> void:
 			if event.is_action_pressed("basic_attack"):
 				_try_basic_attack()
 				get_viewport().set_input_as_handled()
-			elif event.button_index == MOUSE_BUTTON_WHEEL_UP:
-				_set_camera_zoom(spring_arm.spring_length - zoom_step)
-			elif event.button_index == MOUSE_BUTTON_WHEEL_DOWN:
-				_set_camera_zoom(spring_arm.spring_length + zoom_step)
 
 	if event is InputEventMouseMotion and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
 		camera_pivot.rotate_y(-event.relative.x * mouse_sensitivity)
@@ -135,7 +130,8 @@ func _unhandled_input(event: InputEvent) -> void:
 			deg_to_rad(minimum_pitch_degrees),
 			deg_to_rad(maximum_pitch_degrees)
 		)
-		spring_arm.rotation.x = _camera_pitch
+		camera.rotation.x = _camera_pitch
+		_sync_facing_to_camera()
 
 
 func _handle_run_input(event: InputEventKey) -> void:
@@ -202,15 +198,20 @@ func _play_basic_attack_animation() -> void:
 	if _attack_tween != null and _attack_tween.is_valid():
 		_attack_tween.kill()
 
-	weapon_pivot.rotation.y = deg_to_rad(-65.0)
+	weapon_pivot.rotation.z = deg_to_rad(WEAPON_REST_ROTATION_DEGREES)
 	_attack_tween = create_tween()
 	_attack_tween.tween_property(
 		weapon_pivot,
-		"rotation:y",
-		deg_to_rad(65.0),
+		"rotation:z",
+		deg_to_rad(WEAPON_SWING_ROTATION_DEGREES),
 		basic_attack_swing_duration
 	).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
-	_attack_tween.tween_property(weapon_pivot, "rotation:y", deg_to_rad(-65.0), 0.12)
+	_attack_tween.tween_property(
+		weapon_pivot,
+		"rotation:z",
+		deg_to_rad(WEAPON_REST_ROTATION_DEGREES),
+		0.12
+	)
 
 
 func _on_health_changed(current_health: int, maximum_health: int) -> void:
@@ -223,9 +224,16 @@ func _on_damaged(_amount: int) -> void:
 	if _damage_feedback_tween != null and _damage_feedback_tween.is_valid():
 		_damage_feedback_tween.kill()
 
-	_body_material.albedo_color = PLAYER_DAMAGE_FLASH_COLOR
+	damage_overlay.visible = true
+	damage_overlay.color = DAMAGE_OVERLAY_COLOR
 	_damage_feedback_tween = create_tween()
-	_damage_feedback_tween.tween_property(_body_material, "albedo_color", _base_body_color, 0.25)
+	_damage_feedback_tween.tween_property(
+		damage_overlay,
+		"color",
+		Color(DAMAGE_OVERLAY_COLOR, 0.0),
+		0.3
+	)
+	_damage_feedback_tween.tween_callback(func() -> void: damage_overlay.visible = false)
 
 
 func _on_died() -> void:
@@ -238,17 +246,16 @@ func _on_died() -> void:
 	velocity = Vector3.ZERO
 	if _attack_tween != null and _attack_tween.is_valid():
 		_attack_tween.kill()
-	weapon_pivot.rotation.y = deg_to_rad(-65.0)
+	weapon_pivot.rotation.z = deg_to_rad(WEAPON_REST_ROTATION_DEGREES)
 	collision_shape.set_deferred("disabled", true)
-	visuals.visible = false
+	weapon_pivot.visible = false
 	respawn_label.visible = true
 
 	await get_tree().create_timer(respawn_delay).timeout
 
 	global_position = _spawn_position
 	health.reset_health()
-	_body_material.albedo_color = _base_body_color
-	visuals.visible = true
+	weapon_pivot.visible = true
 	respawn_label.visible = false
 	collision_shape.set_deferred("disabled", false)
 	_is_defeated = false
@@ -264,13 +271,31 @@ func _get_camera_relative_direction(input_vector: Vector2) -> Vector3:
 	return direction.normalized()
 
 
-func _rotate_visuals_toward(direction: Vector3, delta: float) -> void:
-	var target_yaw := atan2(-direction.x, -direction.z)
-	visuals.rotation.y = lerp_angle(visuals.rotation.y, target_yaw, turn_speed * delta)
+func _update_keyboard_look(delta: float) -> void:
+	if Input.mouse_mode != Input.MOUSE_MODE_CAPTURED:
+		return
+
+	var yaw_input := (
+		float(Input.is_physical_key_pressed(KEY_RIGHT))
+		- float(Input.is_physical_key_pressed(KEY_LEFT))
+	)
+	var pitch_input := (
+		float(Input.is_physical_key_pressed(KEY_DOWN))
+		- float(Input.is_physical_key_pressed(KEY_UP))
+	)
+	var look_speed := deg_to_rad(keyboard_look_speed_degrees)
+	camera_pivot.rotate_y(-yaw_input * look_speed * delta)
+	_camera_pitch = clampf(
+		_camera_pitch - pitch_input * look_speed * delta,
+		deg_to_rad(minimum_pitch_degrees),
+		deg_to_rad(maximum_pitch_degrees)
+	)
+	camera.rotation.x = _camera_pitch
 
 
-func _set_camera_zoom(new_length: float) -> void:
-	spring_arm.spring_length = clampf(new_length, minimum_zoom, maximum_zoom)
+func _sync_facing_to_camera() -> void:
+	attack_direction.rotation.y = camera_pivot.rotation.y
+	world_model.rotation.y = camera_pivot.rotation.y
 
 
 func _toggle_mouse_capture() -> void:

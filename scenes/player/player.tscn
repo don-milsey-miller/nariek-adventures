@@ -34,7 +34,7 @@ roughness = 0.3
 
 [sub_resource type="BoxMesh" id="BoxMesh_weapon"]
 material = SubResource("Material_weapon")
-size = Vector3(0.13, 0.13, 1.5)
+size = Vector3(0.08, 0.65, 0.08)
 
 [sub_resource type="BoxShape3D" id="BoxShape_melee"]
 size = Vector3(2.2, 1.8, 2.0)
@@ -82,50 +82,79 @@ shape = SubResource("CapsuleShape_player")
 [node name="Health" type="Node" parent="."]
 script = ExtResource("2_health")
 
-[node name="Visuals" type="Node3D" parent="."]
+[node name="WorldModel" type="Node3D" parent="."]
+visible = false
 
-[node name="Body" type="MeshInstance3D" parent="Visuals"]
+[node name="Body" type="MeshInstance3D" parent="WorldModel"]
 position = Vector3(0, 0.9, 0)
 material_override = SubResource("Material_body")
 mesh = SubResource("CapsuleMesh_body")
 
-[node name="FacingMarker" type="MeshInstance3D" parent="Visuals"]
+[node name="FacingMarker" type="MeshInstance3D" parent="WorldModel"]
 position = Vector3(0, 1.15, -0.45)
 mesh = SubResource("BoxMesh_facing")
 
-[node name="WeaponPivot" type="Node3D" parent="Visuals"]
-position = Vector3(0, 0.95, -0.05)
-rotation_degrees = Vector3(0, -65, 0)
+[node name="AttackDirection" type="Node3D" parent="."]
 
-[node name="Weapon" type="MeshInstance3D" parent="Visuals/WeaponPivot"]
-position = Vector3(0, 0, -0.9)
-mesh = SubResource("BoxMesh_weapon")
-
-[node name="MeleeHitbox" type="Area3D" parent="Visuals"]
+[node name="MeleeHitbox" type="Area3D" parent="AttackDirection"]
 position = Vector3(0, 0.9, -1.1)
 collision_layer = 0
 collision_mask = 4
 monitoring = false
 monitorable = false
 
-[node name="CollisionShape3D" type="CollisionShape3D" parent="Visuals/MeleeHitbox"]
+[node name="CollisionShape3D" type="CollisionShape3D" parent="AttackDirection/MeleeHitbox"]
 shape = SubResource("BoxShape_melee")
 
 [node name="CameraPivot" type="Node3D" parent="."]
-position = Vector3(0, 1.45, 0)
+position = Vector3(0, 1.55, 0)
 
-[node name="SpringArm3D" type="SpringArm3D" parent="CameraPivot"]
-rotation_degrees = Vector3(-12, 0, 0)
-spring_length = 5.5
-margin = 0.15
-collision_mask = 1
-
-[node name="Camera3D" type="Camera3D" parent="CameraPivot/SpringArm3D"]
+[node name="Camera3D" type="Camera3D" parent="CameraPivot"]
 current = true
-fov = 70.0
+fov = 75.0
+near = 0.05
+
+[node name="WeaponPivot" type="Node3D" parent="CameraPivot/Camera3D"]
+rotation_degrees = Vector3(0, 0, 12)
+
+[node name="Weapon" type="MeshInstance3D" parent="CameraPivot/Camera3D/WeaponPivot"]
+position = Vector3(0.5, -0.35, -1.05)
+rotation_degrees = Vector3(0, 0, -18)
+cast_shadow = 0
+mesh = SubResource("BoxMesh_weapon")
 
 [node name="HUD" type="CanvasLayer" parent="."]
 layer = 10
+
+[node name="DamageOverlay" type="ColorRect" parent="HUD"]
+visible = false
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(0.9, 0.04, 0.02, 0)
+
+[node name="Crosshair" type="Label" parent="HUD"]
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -12.0
+offset_top = -18.0
+offset_right = 12.0
+offset_bottom = 18.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_colors/font_color = Color(1, 1, 1, 0.85)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 0.8)
+theme_override_constants/outline_size = 3
+theme_override_font_sizes/font_size = 24
+text = "+"
+horizontal_alignment = 1
+vertical_alignment = 1
 
 [node name="HealthPanel" type="PanelContainer" parent="HUD"]
 anchors_preset = 7
