@@ -10,6 +10,12 @@ class_name PlayerController
 @export_range(1.0, 3.0, 0.05) var run_speed_multiplier: float = 1.65
 @export_range(0.1, 0.6, 0.01) var run_double_tap_window: float = 0.3
 
+@export_category("Combat")
+@export_range(1, 1000, 1) var basic_attack_damage: int = 25
+@export_range(0.1, 2.0, 0.05) var basic_attack_cooldown: float = 0.55
+@export_range(0.01, 0.5, 0.01) var basic_attack_hit_delay: float = 0.09
+@export_range(0.05, 0.5, 0.01) var basic_attack_swing_duration: float = 0.18
+
 @export_category("Camera")
 @export_range(0.0005, 0.02, 0.0005) var mouse_sensitivity: float = 0.003
 @export_range(-89.0, 0.0, 1.0) var minimum_pitch_degrees: float = -55.0
@@ -19,12 +25,17 @@ class_name PlayerController
 @export_range(0.1, 2.0, 0.1) var zoom_step: float = 0.6
 
 @onready var visuals: Node3D = $Visuals
+@onready var weapon_pivot: Node3D = $Visuals/WeaponPivot
+@onready var melee_hitbox: Area3D = $Visuals/MeleeHitbox
+@onready var melee_collision_shape: CollisionShape3D = $Visuals/MeleeHitbox/CollisionShape3D
 @onready var camera_pivot: Node3D = $CameraPivot
 @onready var spring_arm: SpringArm3D = $CameraPivot/SpringArm3D
 
 var _camera_pitch: float = 0.0
 var _last_forward_press_msec: int = -1
 var _is_running: bool = false
+var _can_attack: bool = true
+var _attack_tween: Tween
 
 
 func _ready() -> void:
@@ -83,7 +94,10 @@ func _unhandled_input(event: InputEvent) -> void:
 			return
 
 		if Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
-			if event.button_index == MOUSE_BUTTON_WHEEL_UP:
+			if event.is_action_pressed("basic_attack"):
+				_try_basic_attack()
+				get_viewport().set_input_as_handled()
+			elif event.button_index == MOUSE_BUTTON_WHEEL_UP:
 				_set_camera_zoom(spring_arm.spring_length - zoom_step)
 			elif event.button_index == MOUSE_BUTTON_WHEEL_DOWN:
 				_set_camera_zoom(spring_arm.spring_length + zoom_step)
@@ -112,6 +126,62 @@ func _handle_run_input(event: InputEventKey) -> void:
 		_last_forward_press_msec = current_press_msec
 	elif event.is_action_released("move_forward"):
 		_is_running = false
+
+
+func _try_basic_attack() -> void:
+	if not _can_attack:
+		return
+
+	_can_attack = false
+	_play_basic_attack_animation()
+
+	await get_tree().create_timer(basic_attack_hit_delay).timeout
+	_deal_basic_attack_damage()
+
+	var remaining_cooldown := maxf(basic_attack_cooldown - basic_attack_hit_delay, 0.0)
+	if remaining_cooldown > 0.0:
+		await get_tree().create_timer(remaining_cooldown).timeout
+
+	_can_attack = true
+
+
+func _deal_basic_attack_damage() -> void:
+	var damaged_health_components: Array[HealthComponent] = []
+	var shape_query := PhysicsShapeQueryParameters3D.new()
+	shape_query.shape = melee_collision_shape.shape
+	shape_query.transform = melee_collision_shape.global_transform
+	shape_query.collision_mask = melee_hitbox.collision_mask
+	shape_query.collide_with_bodies = true
+	shape_query.collide_with_areas = false
+
+	var collision_results := get_world_3d().direct_space_state.intersect_shape(shape_query, 16)
+
+	for result in collision_results:
+		var body := result.get("collider") as Node
+		if body == null:
+			continue
+
+		var health := body.get_node_or_null("Health") as HealthComponent
+		if health == null or health in damaged_health_components:
+			continue
+
+		health.take_damage(basic_attack_damage)
+		damaged_health_components.append(health)
+
+
+func _play_basic_attack_animation() -> void:
+	if _attack_tween != null and _attack_tween.is_valid():
+		_attack_tween.kill()
+
+	weapon_pivot.rotation.y = deg_to_rad(-65.0)
+	_attack_tween = create_tween()
+	_attack_tween.tween_property(
+		weapon_pivot,
+		"rotation:y",
+		deg_to_rad(65.0),
+		basic_attack_swing_duration
+	).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	_attack_tween.tween_property(weapon_pivot, "rotation:y", deg_to_rad(-65.0), 0.12)
 
 
 func _get_camera_relative_direction(input_vector: Vector2) -> Vector3:

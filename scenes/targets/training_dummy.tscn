@@ -1,0 +1,85 @@
+[gd_scene load_steps=11 format=3]
+
+[ext_resource type="Script" path="res://scripts/training_dummy.gd" id="1_dummy"]
+[ext_resource type="Script" path="res://scripts/components/health_component.gd" id="2_health"]
+
+[sub_resource type="CapsuleShape3D" id="CapsuleShape_dummy"]
+radius = 0.6
+height = 2.2
+
+[sub_resource type="StandardMaterial3D" id="Material_dummy"]
+albedo_color = Color(0.68, 0.3, 0.16, 1)
+roughness = 0.8
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_body"]
+top_radius = 0.48
+bottom_radius = 0.6
+height = 1.6
+radial_segments = 16
+
+[sub_resource type="SphereMesh" id="SphereMesh_head"]
+radius = 0.45
+height = 0.9
+radial_segments = 16
+rings = 8
+
+[sub_resource type="StandardMaterial3D" id="Material_health_background"]
+transparency = 1
+shading_mode = 0
+albedo_color = Color(0.035, 0.04, 0.05, 0.9)
+billboard_mode = 1
+no_depth_test = true
+
+[sub_resource type="StandardMaterial3D" id="Material_health_fill"]
+transparency = 1
+shading_mode = 0
+albedo_color = Color(0.18, 0.86, 0.3, 1)
+billboard_mode = 1
+no_depth_test = true
+
+[sub_resource type="QuadMesh" id="QuadMesh_health_background"]
+material = SubResource("Material_health_background")
+size = Vector2(1.7, 0.2)
+
+[sub_resource type="QuadMesh" id="QuadMesh_health_fill"]
+material = SubResource("Material_health_fill")
+size = Vector2(1.6, 0.12)
+
+[node name="TrainingDummy" type="Node3D"]
+script = ExtResource("1_dummy")
+
+[node name="DummyBody" type="StaticBody3D" parent="."]
+collision_layer = 4
+collision_mask = 0
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="DummyBody"]
+position = Vector3(0, 1.1, 0)
+shape = SubResource("CapsuleShape_dummy")
+
+[node name="Health" type="Node" parent="DummyBody"]
+script = ExtResource("2_health")
+
+[node name="Visuals" type="Node3D" parent="."]
+
+[node name="Body" type="MeshInstance3D" parent="Visuals"]
+position = Vector3(0, 0.8, 0)
+material_override = SubResource("Material_dummy")
+mesh = SubResource("CylinderMesh_body")
+
+[node name="Head" type="MeshInstance3D" parent="Visuals"]
+position = Vector3(0, 1.85, 0)
+material_override = SubResource("Material_dummy")
+mesh = SubResource("SphereMesh_head")
+
+[node name="HealthBar" type="Node3D" parent="Visuals"]
+position = Vector3(0, 2.65, 0)
+
+[node name="Background" type="MeshInstance3D" parent="Visuals/HealthBar"]
+render_priority = 1
+mesh = SubResource("QuadMesh_health_background")
+
+[node name="Fill" type="MeshInstance3D" parent="Visuals/HealthBar"]
+position = Vector3(0, 0, 0.01)
+render_priority = 2
+mesh = SubResource("QuadMesh_health_fill")
+

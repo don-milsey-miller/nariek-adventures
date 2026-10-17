@@ -1,4 +1,4 @@
-[gd_scene load_steps=7 format=3]
+[gd_scene load_steps=10 format=3]
 
 [ext_resource type="Script" path="res://scripts/player_controller.gd" id="1_controller"]
 
@@ -26,9 +26,21 @@ roughness = 0.5
 material = SubResource("Material_facing")
 size = Vector3(0.2, 0.2, 0.3)
 
+[sub_resource type="StandardMaterial3D" id="Material_weapon"]
+albedo_color = Color(0.92, 0.76, 0.28, 1)
+metallic = 0.65
+roughness = 0.3
+
+[sub_resource type="BoxMesh" id="BoxMesh_weapon"]
+material = SubResource("Material_weapon")
+size = Vector3(0.13, 0.13, 1.5)
+
+[sub_resource type="BoxShape3D" id="BoxShape_melee"]
+size = Vector3(2.2, 1.8, 2.0)
+
 [node name="Player" type="CharacterBody3D"]
 collision_layer = 2
-collision_mask = 1
+collision_mask = 5
 floor_snap_length = 0.3
 script = ExtResource("1_controller")
 
@@ -45,6 +57,24 @@ mesh = SubResource("CapsuleMesh_body")
 [node name="FacingMarker" type="MeshInstance3D" parent="Visuals"]
 position = Vector3(0, 1.15, -0.45)
 mesh = SubResource("BoxMesh_facing")
+
+[node name="WeaponPivot" type="Node3D" parent="Visuals"]
+position = Vector3(0, 0.95, -0.05)
+rotation_degrees = Vector3(0, -65, 0)
+
+[node name="Weapon" type="MeshInstance3D" parent="Visuals/WeaponPivot"]
+position = Vector3(0, 0, -0.9)
+mesh = SubResource("BoxMesh_weapon")
+
+[node name="MeleeHitbox" type="Area3D" parent="Visuals"]
+position = Vector3(0, 0.9, -1.1)
+collision_layer = 0
+collision_mask = 4
+monitoring = false
+monitorable = false
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Visuals/MeleeHitbox"]
+shape = SubResource("BoxShape_melee")
 
 [node name="CameraPivot" type="Node3D" parent="."]
 position = Vector3(0, 1.45, 0)

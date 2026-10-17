@@ -1,6 +1,7 @@
-[gd_scene load_steps=9 format=3]
+[gd_scene load_steps=10 format=3]
 
 [ext_resource type="PackedScene" path="res://scenes/player/player.tscn" id="1_player"]
+[ext_resource type="PackedScene" path="res://scenes/targets/training_dummy.tscn" id="2_dummy"]
 
 [sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_arena"]
 sky_top_color = Color(0.12, 0.24, 0.43, 1)
@@ -107,6 +108,9 @@ sides = 16
 use_collision = true
 material = SubResource("Material_wall")
 
+[node name="TrainingDummy" parent="." instance=ExtResource("2_dummy")]
+position = Vector3(0, 0.1, 0)
+
 [node name="Player" parent="." instance=ExtResource("1_player")]
 position = Vector3(0, 0.05, 7)
 
@@ -122,17 +126,17 @@ theme_override_colors/font_color = Color(0.88, 0.93, 1, 1)
 theme_override_colors/font_outline_color = Color(0.02, 0.03, 0.05, 0.9)
 theme_override_constants/outline_size = 6
 theme_override_font_sizes/font_size = 24
-text = "NARIEK ADVENTURES — MOVEMENT SANDBOX"
+text = "NARIEK ADVENTURES — COMBAT SANDBOX"
 horizontal_alignment = 1
 
 [node name="Controls" type="Label" parent="HUD"]
 offset_left = 20.0
 offset_top = 20.0
 offset_right = 500.0
-offset_bottom = 160.0
+offset_bottom = 185.0
 theme_override_colors/font_color = Color(0.9, 0.94, 1, 1)
 theme_override_colors/font_outline_color = Color(0.02, 0.03, 0.05, 0.9)
 theme_override_constants/outline_size = 6
 theme_override_font_sizes/font_size = 17
-text = "WASD  Move\nDouble-tap + hold W  Run\nMouse  Look\nWheel  Zoom\nSpace  Jump\nEsc  Release mouse"
+text = "WASD  Move\nDouble-tap + hold W  Run\nLeft click  Attack\nMouse  Look\nWheel  Zoom\nSpace  Jump\nEsc  Release mouse"
 
