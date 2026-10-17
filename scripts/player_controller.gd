@@ -7,6 +7,8 @@ class_name PlayerController
 @export_range(0.1, 60.0, 0.1) var deceleration: float = 30.0
 @export_range(0.1, 20.0, 0.1) var turn_speed: float = 12.0
 @export_range(0.1, 20.0, 0.1) var jump_velocity: float = 5.5
+@export_range(1.0, 3.0, 0.05) var run_speed_multiplier: float = 1.65
+@export_range(0.1, 0.6, 0.01) var run_double_tap_window: float = 0.3
 
 @export_category("Camera")
 @export_range(0.0005, 0.02, 0.0005) var mouse_sensitivity: float = 0.003
@@ -21,6 +23,8 @@ class_name PlayerController
 @onready var spring_arm: SpringArm3D = $CameraPivot/SpringArm3D
 
 var _camera_pitch: float = 0.0
+var _last_forward_press_msec: int = -1
+var _is_running: bool = false
 
 
 func _ready() -> void:
@@ -36,10 +40,19 @@ func _physics_process(delta: float) -> void:
 		"move_backward"
 	)
 	var movement_direction := _get_camera_relative_direction(input_vector)
+	var current_move_speed := move_speed * run_speed_multiplier if _is_running else move_speed
 
 	if movement_direction != Vector3.ZERO:
-		velocity.x = move_toward(velocity.x, movement_direction.x * move_speed, acceleration * delta)
-		velocity.z = move_toward(velocity.z, movement_direction.z * move_speed, acceleration * delta)
+		velocity.x = move_toward(
+			velocity.x,
+			movement_direction.x * current_move_speed,
+			acceleration * delta
+		)
+		velocity.z = move_toward(
+			velocity.z,
+			movement_direction.z * current_move_speed,
+			acceleration * delta
+		)
 		_rotate_visuals_toward(movement_direction, delta)
 	else:
 		velocity.x = move_toward(velocity.x, 0.0, deceleration * delta)
@@ -55,6 +68,9 @@ func _physics_process(delta: float) -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
+	if event is InputEventKey and not event.echo:
+		_handle_run_input(event)
+
 	if event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_ESCAPE:
 		_toggle_mouse_capture()
 		get_viewport().set_input_as_handled()
@@ -80,6 +96,22 @@ func _unhandled_input(event: InputEvent) -> void:
 			deg_to_rad(maximum_pitch_degrees)
 		)
 		spring_arm.rotation.x = _camera_pitch
+
+
+func _handle_run_input(event: InputEventKey) -> void:
+	if event.is_action_pressed("move_forward"):
+		var current_press_msec := Time.get_ticks_msec()
+		var double_tap_window_msec := int(run_double_tap_window * 1000.0)
+
+		if (
+			_last_forward_press_msec >= 0
+			and current_press_msec - _last_forward_press_msec <= double_tap_window_msec
+		):
+			_is_running = true
+
+		_last_forward_press_msec = current_press_msec
+	elif event.is_action_released("move_forward"):
+		_is_running = false
 
 
 func _get_camera_relative_direction(input_vector: Vector2) -> Vector3:

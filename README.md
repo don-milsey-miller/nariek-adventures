@@ -10,6 +10,7 @@ The project currently contains a small 3D movement sandbox with:
 
 - A third-person placeholder character
 - Camera-relative WASD movement
+- Double-tap-and-hold W running
 - Mouse-controlled camera orbit and wheel zoom
 - Jumping, gravity, and collision
 - A greybox arena with several obstacles
