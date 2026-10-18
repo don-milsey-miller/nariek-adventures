@@ -8,8 +8,9 @@ enum EnemyState {
 	DEFEATED,
 }
 
-const TELEGRAPH_COLOR := Color(1.0, 0.78, 0.12, 1.0)
-const DAMAGE_FLASH_COLOR := Color(1.0, 0.95, 0.92, 1.0)
+const CLEAR_FEEDBACK_COLOR := Color(1.0, 1.0, 1.0, 0.0)
+const TELEGRAPH_COLOR := Color(1.0, 0.72, 0.08, 0.55)
+const DAMAGE_FLASH_COLOR := Color(1.0, 0.95, 0.92, 0.72)
 
 @export_category("Movement")
 @export_range(0.1, 10.0, 0.1) var move_speed: float = 3.2
@@ -27,22 +28,23 @@ const DAMAGE_FLASH_COLOR := Color(1.0, 0.95, 0.92, 1.0)
 @onready var collision_shape: CollisionShape3D = $CollisionShape3D
 @onready var health: HealthComponent = $Health
 @onready var visuals: Node3D = $Visuals
-@onready var body_mesh: MeshInstance3D = $Visuals/Body
+@onready var model_root: Node3D = $Visuals/OrcModel
 @onready var health_fill: MeshInstance3D = $Visuals/HealthBar/Fill
 
 var current_state: EnemyState = EnemyState.IDLE
 var target: PlayerController
 var _spawn_position: Vector3
-var _body_material: StandardMaterial3D
-var _base_body_color: Color
+var _feedback_material: StandardMaterial3D
 var _feedback_tween: Tween
 
 
 func _ready() -> void:
 	_spawn_position = global_position
-	_body_material = body_mesh.material_override.duplicate() as StandardMaterial3D
-	body_mesh.material_override = _body_material
-	_base_body_color = _body_material.albedo_color
+	_feedback_material = StandardMaterial3D.new()
+	_feedback_material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	_feedback_material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	_feedback_material.albedo_color = CLEAR_FEEDBACK_COLOR
+	_apply_feedback_overlay(model_root)
 	target = get_tree().get_first_node_in_group("player") as PlayerController
 
 	health.health_changed.connect(_on_health_changed)
@@ -124,13 +126,13 @@ func _begin_attack() -> void:
 	var direction := target.global_position - global_position
 	direction.y = 0.0
 	_face_direction(direction.normalized(), 1.0)
-	_set_body_color(TELEGRAPH_COLOR)
+	_set_feedback_color(TELEGRAPH_COLOR)
 
 	await get_tree().create_timer(attack_windup).timeout
 	if current_state != EnemyState.ATTACK:
 		return
 
-	_set_body_color(_base_body_color)
+	_set_feedback_color(CLEAR_FEEDBACK_COLOR)
 	if (
 		is_instance_valid(target)
 		and not target.health.is_dead
@@ -162,9 +164,14 @@ func _on_damaged(amount: int) -> void:
 	if _feedback_tween != null and _feedback_tween.is_valid():
 		_feedback_tween.kill()
 
-	_set_body_color(DAMAGE_FLASH_COLOR)
+	_set_feedback_color(DAMAGE_FLASH_COLOR)
 	_feedback_tween = create_tween()
-	_feedback_tween.tween_property(_body_material, "albedo_color", _base_body_color, 0.2)
+	_feedback_tween.tween_property(
+		_feedback_material,
+		"albedo_color",
+		CLEAR_FEEDBACK_COLOR,
+		0.2
+	)
 
 
 func _on_died() -> void:
@@ -177,20 +184,28 @@ func _on_died() -> void:
 
 	global_position = _spawn_position
 	health.reset_health()
-	_set_body_color(_base_body_color)
+	_set_feedback_color(CLEAR_FEEDBACK_COLOR)
 	visuals.visible = true
 	collision_shape.set_deferred("disabled", false)
 	current_state = EnemyState.IDLE
 
 
-func _set_body_color(color: Color) -> void:
-	_body_material.albedo_color = color
+func _set_feedback_color(color: Color) -> void:
+	_feedback_material.albedo_color = color
+
+
+func _apply_feedback_overlay(node: Node) -> void:
+	if node is MeshInstance3D:
+		(node as MeshInstance3D).material_overlay = _feedback_material
+
+	for child: Node in node.get_children():
+		_apply_feedback_overlay(child)
 
 
 func _show_damage_number(amount: int) -> void:
 	var damage_label := Label3D.new()
 	damage_label.text = "-%d" % amount
-	damage_label.position = Vector3(0.0, 2.25, 0.0)
+	damage_label.position = Vector3(0.0, 2.6, 0.0)
 	damage_label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
 	damage_label.fixed_size = true
 	damage_label.font_size = 64

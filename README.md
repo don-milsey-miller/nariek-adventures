@@ -17,7 +17,7 @@ The project currently contains a small 3D movement sandbox with:
 - A greybox arena with several obstacles
 - A basic left-click melee attack with a visible weapon swing
 - A damageable training dummy with health, damage feedback, death, and respawning
-- A red enemy that detects, chases, and attacks the player
+- A textured orc enemy that detects, chases, and attacks the player
 - A yellow attack warning that gives the player time to dodge
 - Player health, defeat, and automatic respawning
 
@@ -52,6 +52,12 @@ scripts/components/ Small reusable gameplay building blocks
 ```
 
 More folders will be added only when the project needs them.
+
+## Third-party assets
+
+Third-party art and its required attribution are recorded in
+[`THIRD_PARTY_ASSETS.md`](THIRD_PARTY_ASSETS.md). Prototype assets must be reviewed
+or replaced before a public or commercial release.
 
 ## Development principles
 

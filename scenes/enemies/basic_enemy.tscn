@@ -1,29 +1,12 @@
-[gd_scene load_steps=12 format=3]
+[gd_scene load_steps=9 format=3]
 
 [ext_resource type="Script" path="res://scripts/basic_enemy.gd" id="1_enemy"]
 [ext_resource type="Script" path="res://scripts/components/health_component.gd" id="2_health"]
+[ext_resource type="PackedScene" path="res://assets/characters/orc_warrior/orc_warrior.glb" id="3_orc"]
 
 [sub_resource type="CapsuleShape3D" id="CapsuleShape_enemy"]
 radius = 0.48
 height = 1.8
-
-[sub_resource type="StandardMaterial3D" id="Material_enemy"]
-albedo_color = Color(0.68, 0.12, 0.1, 1)
-roughness = 0.62
-
-[sub_resource type="CapsuleMesh" id="CapsuleMesh_enemy"]
-radius = 0.48
-height = 1.8
-radial_segments = 18
-rings = 8
-
-[sub_resource type="StandardMaterial3D" id="Material_facing"]
-albedo_color = Color(1, 0.72, 0.18, 1)
-roughness = 0.5
-
-[sub_resource type="BoxMesh" id="BoxMesh_facing"]
-material = SubResource("Material_facing")
-size = Vector3(0.22, 0.22, 0.3)
 
 [sub_resource type="StandardMaterial3D" id="Material_health_background"]
 transparency = 1
@@ -63,17 +46,11 @@ maximum_health = 75
 
 [node name="Visuals" type="Node3D" parent="."]
 
-[node name="Body" type="MeshInstance3D" parent="Visuals"]
-position = Vector3(0, 0.9, 0)
-material_override = SubResource("Material_enemy")
-mesh = SubResource("CapsuleMesh_enemy")
-
-[node name="FacingMarker" type="MeshInstance3D" parent="Visuals"]
-position = Vector3(0, 1.15, -0.5)
-mesh = SubResource("BoxMesh_facing")
+[node name="OrcModel" parent="Visuals" instance=ExtResource("3_orc")]
+rotation_degrees = Vector3(0, 180, 0)
 
 [node name="HealthBar" type="Node3D" parent="Visuals"]
-position = Vector3(0, 2.15, 0)
+position = Vector3(0, 2.55, 0)
 
 [node name="Background" type="MeshInstance3D" parent="Visuals/HealthBar"]
 render_priority = 1
